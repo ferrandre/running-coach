@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Running Coach"/>
+<title>Running Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#0a0a0a;--surface:#141414;--surface2:#1e1e1e;--surface3:#282828;
+  --accent:#00e57a;--accent-dim:#00b35f;--accent-glow:rgba(0,229,122,0.15);
+  --text:#f0f0f0;--text2:#888;--text3:#555;
+  --red:#ff4d4d;--amber:#ffb020;--blue:#4da6ff;
+  --radius:14px;--radius-sm:8px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;overflow:hidden;}
+.app{display:flex;flex-direction:column;height:100%;max-width:430px;margin:0 auto;}
+
+/* HEADER */
+.header{
+  padding:calc(var(--safe-top) + 16px) 20px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid #1a1a1a;
+  background:var(--bg);
+}
+.header-title{font-size:18px;font-weight:800;letter-spacing:-0.5px;}
+.header-title span{color:var(--accent);}
+.sync-btn{
+  display:flex;align-items:center;gap:6px;padding:7px 14px;
+  background:var(--surface2);border:1px solid #333;border-radius:20px;
+  color:var(--text2);font-size:12px;font-family:'Syne',sans-serif;cursor:pointer;
+  transition:all 0.2s;
+}
+.sync-btn:active{transform:scale(0.96);}
+.sync-btn.syncing{color:var(--accent);border-color:var(--accent);animation:pulse 1s infinite;}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+
+/* SCROLL AREA */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 0 80px;}
+.scroll::-webkit-scrollbar{display:none;}
+
+/* NAV */
+.nav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;
+  display:flex;background:rgba(10,10,10,0.95);backdrop-filter:blur(20px);
+  border-top:1px solid #1a1a1a;
+  padding-bottom:var(--safe-bottom);
+  z-index:100;
+}
+.nav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:10px 0;cursor:pointer;transition:all 0.2s;
+  color:var(--text3);font-size:10px;font-weight:600;letter-spacing:0.5px;
+  border:none;background:transparent;font-family:'Syne',sans-serif;
+}
+.nav-item.active{color:var(--accent);}
+.nav-icon{font-size:20px;transition:transform 0.2s;}
+.nav-item.active .nav-icon{transform:scale(1.1);}
+
+/* SECTIONS */
+.section{display:none;padding:20px;}
+.section.active{display:block;}
+
+/* STATS GRID */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.stat-card{
+  background:var(--surface);border:1px solid #1e1e1e;border-radius:var(--radius);
+  padding:16px;position:relative;overflow:hidden;
+}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--accent);opacity:0;transition:opacity 0.3s;
+}
+.stat-card.highlight::before{opacity:1;}
+.stat-num{font-size:28px;font-weight:800;color:var(--text);letter-spacing:-1px;font-family:'DM Mono',monospace;}
+.stat-unit{font-size:12px;color:var(--text2);font-weight:400;}
+.stat-label{font-size:11px;color:var(--text3);margin-top:4px;letter-spacing:0.5px;text-transform:uppercase;}
+.stat-trend{font-size:10px;color:var(--accent);margin-top:2px;}
+
+/* SECTION TITLE */
+.sec-title{font-size:13px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;}
+
+/* RUN CARDS */
+.runs-list{display:flex;flex-direction:column;gap:8px;}
+.run-card{
+  background:var(--surface);border:1px solid #1e1e1e;border-radius:var(--radius);
+  padding:14px 16px;display:flex;align-items:center;gap:14px;
+  transition:border-color 0.2s;cursor:pointer;
+}
+.run-card:active{background:var(--surface2);}
+.run-type-dot{
+  width:40px;height:40px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;
+}
+.run-info{flex:1;min-width:0;}
+.run-title{font-size:15px;font-weight:700;color:var(--text);}
+.run-meta{font-size:12px;color:var(--text2);margin-top:3px;font-family:'DM Mono',monospace;}
+.run-right{text-align:right;flex-shrink:0;}
+.run-pace{font-size:16px;font-weight:700;color:var(--accent);font-family:'DM Mono',monospace;}
+.run-pace-label{font-size:10px;color:var(--text3);}
+
+.badge{
+  display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;
+  font-weight:600;letter-spacing:0.3px;
+}
+.badge-easy{background:rgba(0,229,122,0.1);color:var(--accent);}
+.badge-hard{background:rgba(255,77,77,0.1);color:var(--red);}
+.badge-med{background:rgba(255,176,32,0.1);color:var(--amber);}
+.badge-race{background:rgba(77,166,255,0.1);color:var(--blue);}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:48px 20px;color:var(--text3);}
+.empty-icon{font-size:48px;margin-bottom:12px;opacity:0.3;}
+.empty-text{font-size:14px;line-height:1.6;}
+
+/* SETUP PANEL */
+.setup-panel{
+  background:var(--surface);border:1px solid #1e1e1e;border-radius:var(--radius);padding:20px;margin-bottom:16px;
+}
+.setup-label{font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:600;}
+.setup-input{
+  width:100%;padding:12px 14px;background:var(--surface2);border:1px solid #333;
+  border-radius:var(--radius-sm);color:var(--text);font-size:13px;
+  font-family:'DM Mono',monospace;outline:none;margin-bottom:12px;
+}
+.setup-input:focus{border-color:var(--accent);}
+.save-btn{
+  width:100%;padding:13px;background:var(--accent);color:#000;border:none;
+  border-radius:var(--radius-sm);font-size:15px;font-weight:800;
+  font-family:'Syne',sans-serif;cursor:pointer;transition:opacity 0.2s;
+}
+.save-btn:active{opacity:0.8;}
+.setup-note{font-size:11px;color:var(--text3);margin-top:10px;line-height:1.6;}
+
+/* PLAN */
+.plan-week{background:var(--surface);border:1px solid #1e1e1e;border-radius:var(--radius);overflow:hidden;margin-bottom:12px;}
+.plan-week-hdr{
+  background:var(--surface2);padding:12px 16px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.plan-week-title{font-size:13px;font-weight:700;color:var(--text);}
+.plan-week-sub{font-size:11px;color:var(--text3);}
+.plan-day{
+  padding:12px 16px;border-top:1px solid #1a1a1a;
+  display:flex;align-items:center;gap:12px;
+}
+.plan-day-name{font-size:11px;color:var(--text3);width:36px;font-weight:600;}
+.plan-day-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dot-run{background:var(--accent);}
+.dot-rest{background:var(--surface3);}
+.dot-race{background:var(--red);}
+.dot-long{background:var(--blue);}
+.plan-day-act{flex:1;font-size:13px;color:var(--text);}
+.plan-day-det{font-size:11px;color:var(--text3);margin-top:1px;}
+
+/* CHAT */
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 130px - var(--safe-top) - var(--safe-bottom));}
+.chat-msgs{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 0 12px;}
+.chat-msgs::-webkit-scrollbar{display:none;}
+.msg-row{display:flex;gap:8px;margin-bottom:12px;align-items:flex-end;}
+.msg-row.user{flex-direction:row-reverse;}
+.msg-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.msg-avatar.ai{background:var(--accent-glow);border:1px solid rgba(0,229,122,0.3);}
+.msg-avatar.user{background:var(--surface3);}
+.msg-bubble{
+  max-width:78%;padding:10px 14px;font-size:14px;line-height:1.55;
+  border-radius:16px;word-wrap:break-word;
+}
+.msg-row.ai .msg-bubble{background:var(--surface2);color:var(--text);border-radius:4px 16px 16px 16px;}
+.msg-row.user .msg-bubble{background:var(--accent);color:#000;font-weight:600;border-radius:16px 4px 16px 16px;}
+.msg-time{font-size:10px;color:var(--text3);margin-top:3px;font-family:'DM Mono',monospace;}
+.typing-bubble{background:var(--surface2);padding:12px 16px;border-radius:4px 16px 16px 16px;display:flex;gap:5px;align-items:center;}
+.typing-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);animation:tdot 1.2s infinite;}
+.typing-dot:nth-child(2){animation-delay:0.2s;}
+.typing-dot:nth-child(3){animation-delay:0.4s;}
+@keyframes tdot{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1);opacity:1}}
+
+.quick-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.chip{
+  padding:7px 12px;background:var(--surface2);border:1px solid #333;
+  border-radius:20px;font-size:12px;color:var(--text2);cursor:pointer;
+  font-family:'Syne',sans-serif;transition:all 0.15s;white-space:nowrap;
+}
+.chip:active{background:var(--surface3);border-color:var(--accent);color:var(--accent);}
+
+.chat-input-row{
+  display:flex;gap:8px;padding-top:10px;border-top:1px solid #1a1a1a;
+  background:var(--bg);
+}
+.chat-input{
+  flex:1;padding:11px 14px;background:var(--surface2);border:1px solid #333;
+  border-radius:24px;color:var(--text);font-size:14px;font-family:'Syne',sans-serif;outline:none;
+}
+.chat-input:focus{border-color:var(--accent);}
+.send-btn{
+  width:42px;height:42px;border-radius:50%;background:var(--accent);border:none;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;
+  font-size:18px;transition:transform 0.15s;
+}
+.send-btn:active{transform:scale(0.92);}
+
+/* TOAST */
+.toast{
+  position:fixed;top:calc(var(--safe-top) + 70px);left:50%;transform:translateX(-50%) translateY(-20px);
+  background:var(--surface2);border:1px solid var(--accent);color:var(--accent);
+  padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;
+  opacity:0;transition:all 0.3s;pointer-events:none;z-index:999;white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* CHART */
+.chart-wrap{background:var(--surface);border:1px solid #1e1e1e;border-radius:var(--radius);padding:16px;margin-bottom:16px;}
+.chart-title{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;font-weight:700;}
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:80px;}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.bar{width:100%;border-radius:4px 4px 0 0;background:var(--accent);opacity:0.7;min-height:2px;transition:height 0.3s;}
+.bar-label{font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-title">running<span>.</span>coach</div>
+    <button class="sync-btn" id="sync-btn" onclick="syncStrava()">
+      <div class="sync-dot"></div>
+      <span id="sync-label">Sync Strava</span>
+    </button>
+  </div>
+
+  <div class="scroll" id="main-scroll">
+    <!-- DASHBOARD -->
+    <div class="section active" id="sec-dash">
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card highlight">
+          <div class="stat-num" id="s-runs">0</div>
+          <div class="stat-label">Corse</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="s-km">0<span class="stat-unit"> km</span></div>
+          <div class="stat-label">Totale</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="s-pace">—</div>
+          <div class="stat-label">Passo medio</div>
+          <div class="stat-trend">min/km</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="s-week">0<span class="stat-unit"> km</span></div>
+          <div class="stat-label">Questa settimana</div>
+        </div>
+      </div>
+      <div class="chart-wrap" id="chart-wrap" style="display:none">
+        <div class="chart-title">Km ultimi 7 allenamenti</div>
+        <div class="bar-chart" id="bar-chart"></div>
+      </div>
+      <div class="sec-title">Corse recenti</div>
+      <div class="runs-list" id="runs-list">
+        <div class="empty"><div class="empty-icon">🏃</div><div class="empty-text">Premi "Sync Strava" per caricare<br>le tue corse automaticamente.</div></div>
+      </div>
+    </div>
+
+    <!-- IMPOSTAZIONI / SETUP -->
+    <div class="section" id="sec-setup">
+      <div class="sec-title" style="margin-bottom:16px">Connessione Strava</div>
+      <div class="setup-panel">
+        <div class="setup-label">Client ID</div>
+        <input class="setup-input" id="inp-cid" type="text" placeholder="es. 123456" inputmode="numeric"/>
+        <div class="setup-label">Client Secret</div>
+        <input class="setup-input" id="inp-cs" type="text" placeholder="abc123..."/>
+        <div class="setup-label">Refresh Token</div>
+        <input class="setup-input" id="inp-rt" type="text" placeholder="eb5c8ac..."/>
+        <button class="save-btn" onclick="saveCredentials()">Salva e connetti</button>
+        <div class="setup-note">
+          I tuoi dati vengono salvati solo sul tuo dispositivo e non vengono mai inviati a server esterni.
+          L'access token viene aggiornato automaticamente ad ogni sync.
+        </div>
+      </div>
+    </div>
+
+    <!-- PIANO -->
+    <div class="section" id="sec-plan">
+      <div class="sec-title" style="margin-bottom:16px">Piano di allenamento</div>
+      <div id="plan-container">
+        <div class="empty"><div class="empty-icon">📅</div><div class="empty-text">Nessun piano ancora.<br>Chiedi al Coach di crearne uno!</div></div>
+      </div>
+    </div>
+
+    <!-- COACH -->
+    <div class="section" id="sec-coach">
+      <div class="chat-wrap">
+        <div class="quick-chips" id="chips">
+          <div class="chip" onclick="sendQuick('Analizza le mie corse recenti')">📊 Analisi</div>
+          <div class="chip" onclick="sendQuick('Crea un piano di allenamento')">📅 Piano</div>
+          <div class="chip" onclick="sendQuick('Come miglioro il mio passo?')">⚡ Passo</div>
+          <div class="chip" onclick="sendQuick('Sono pronto per una gara?')">🏁 Gara</div>
+        </div>
+        <div class="chat-msgs" id="chat-msgs"></div>
+        <div class="chat-input-row">
+          <input class="chat-input" id="chat-inp" placeholder="Scrivi al coach..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"/>
+          <button class="send-btn" onclick="sendMsg()">↑</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <button class="nav-item active" onclick="goTo('dash')" id="nav-dash">
+      <span class="nav-icon">📊</span><span>Dashboard</span>
+    </button>
+    <button class="nav-item" onclick="goTo('plan')" id="nav-plan">
+      <span class="nav-icon">📅</span><span>Piano</span>
+    </button>
+    <button class="nav-item" onclick="goTo('coach')" id="nav-coach">
+      <span class="nav-icon">🤖</span><span>Coach</span>
+    </button>
+    <button class="nav-item" onclick="goTo('setup')" id="nav-setup">
+      <span class="nav-icon">⚙️</span><span>Imposta</span>
+    </button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let runs = JSON.parse(localStorage.getItem('rc_runs')||'[]');
+let plan = JSON.parse(localStorage.getItem('rc_plan')||'null');
+let chatHistory = [];
+let creds = JSON.parse(localStorage.getItem('rc_creds')||'{}');
+
+// ---- NAVIGATION ----
+function goTo(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
+  document.getElementById('main-scroll').scrollTop=0;
+  if(id==='dash') renderDashboard();
+  if(id==='plan') renderPlan();
+  if(id==='coach' && chatHistory.length===0) initChat();
+  if(id==='setup') loadSetup();
+}
+
+// ---- TOAST ----
+function showToast(msg,ms=2500){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),ms);
+}
+
+// ---- STRAVA AUTH ----
+async function getAccessToken(){
+  if(!creds.clientId||!creds.clientSecret||!creds.refreshToken){
+    showToast('⚙️ Configura prima le credenziali Strava');
+    goTo('setup'); return null;
+  }
+  try{
+    const r=await fetch('https://www.strava.com/oauth/token',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        client_id:creds.clientId,
+        client_secret:creds.clientSecret,
+        refresh_token:creds.refreshToken,
+        grant_type:'refresh_token'
+      })
+    });
+    const d=await r.json();
+    if(d.access_token){
+      creds.refreshToken=d.refresh_token||creds.refreshToken;
+      localStorage.setItem('rc_creds',JSON.stringify(creds));
+      return d.access_token;
+    }
+    showToast('❌ Token non valido. Ricontrolla le credenziali.');
+    return null;
+  } catch(e){ showToast('❌ Errore di rete'); return null; }
+}
+
+async function syncStrava(){
+  const btn=document.getElementById('sync-btn');
+  const label=document.getElementById('sync-label');
+  btn.classList.add('syncing'); label.textContent='Sync...';
+  const token=await getAccessToken();
+  if(!token){ btn.classList.remove('syncing'); label.textContent='Sync Strava'; return; }
+  try{
+    const r=await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=30',{
+      headers:{Authorization:'Bearer '+token}
+    });
+    const acts=await r.json();
+    if(!Array.isArray(acts)){ showToast('❌ Errore Strava'); return; }
+    runs = acts
+      .filter(a=>a.type==='Run'||a.type==='TrailRun')
+      .map(a=>{
+        const km=(a.distance/1000);
+        const min=Math.round(a.moving_time/60);
+        const pace=km>0?(min/km):0;
+        return {
+          id:a.id,
+          date:a.start_date_local.split('T')[0],
+          km:parseFloat(km.toFixed(2)),
+          min,
+          pace:parseFloat(pace.toFixed(2)),
+          type:classifyRun(a),
+          name:a.name,
+          effort:a.perceived_exertion||null,
+          heartrate:a.average_heartrate||null,
+          elevGain:a.total_elevation_gain||0,
+          note:''
+        };
+      });
+    localStorage.setItem('rc_runs',JSON.stringify(runs));
+    showToast('✅ '+runs.length+' corse caricate!');
+    renderDashboard();
+  } catch(e){ showToast('❌ Errore durante il sync'); }
+  finally{ btn.classList.remove('syncing'); label.textContent='Sync Strava'; }
+}
+
+function classifyRun(a){
+  const km=a.distance/1000;
+  const name=(a.name||'').toLowerCase();
+  if(name.includes('gara')||name.includes('race')) return 'Gara';
+  if(name.includes('interval')||name.includes('fartlek')) return 'Intervalli';
+  if(km>=18) return 'Lungo';
+  if(km>=10) return 'Medio';
+  return 'Facile';
+}
+
+// ---- DASHBOARD ----
+function renderDashboard(){
+  const totalKm=runs.reduce((a,r)=>a+r.km,0);
+  const totalMin=runs.reduce((a,r)=>a+r.min,0);
+  const avgPace=runs.length?runs.reduce((a,r)=>a+r.pace,0)/runs.length:0;
+  const now=new Date(); const dow=now.getDay();
+  const weekStart=new Date(now); weekStart.setDate(now.getDate()-(dow===0?6:dow-1));
+  weekStart.setHours(0,0,0,0);
+  const weekKm=runs.filter(r=>new Date(r.date)>=weekStart).reduce((a,r)=>a+r.km,0);
+
+  document.getElementById('s-runs').textContent=runs.length;
+  document.getElementById('s-km').innerHTML=totalKm.toFixed(1)+'<span class="stat-unit"> km</span>';
+  document.getElementById('s-week').innerHTML=weekKm.toFixed(1)+'<span class="stat-unit"> km</span>';
+  if(avgPace){
+    const m=Math.floor(avgPace),s=Math.round((avgPace-m)*60);
+    document.getElementById('s-pace').textContent=m+':'+(s<10?'0'+s:s);
+  }
+
+  // Bar chart
+  if(runs.length>0){
+    document.getElementById('chart-wrap').style.display='block';
+    const last7=runs.slice(0,7).reverse();
+    const max=Math.max(...last7.map(r=>r.km),1);
+    document.getElementById('bar-chart').innerHTML=last7.map(r=>{
+      const h=Math.round((r.km/max)*70)+2;
+      const d=new Date(r.date);
+      return `<div class="bar-col"><div class="bar" style="height:${h}px;opacity:${r.type==='Lungo'?1:0.6}"></div><div class="bar-label">${r.km.toFixed(0)}</div></div>`;
+    }).join('');
+  }
+
+  // Runs list
+  const list=document.getElementById('runs-list');
+  if(!runs.length){
+    list.innerHTML='<div class="empty"><div class="empty-icon">🏃</div><div class="empty-text">Premi "Sync Strava" per caricare<br>le tue corse automaticamente.</div></div>';
+    return;
+  }
+  const typeEmoji={Facile:'🟢',Medio:'🟡',Lungo:'🔵',Intervalli:'🔴',Gara:'🏆',Recovery:'😴'};
+  const badgeClass={Facile:'badge-easy',Medio:'badge-med',Lungo:'badge-race',Intervalli:'badge-hard',Gara:'badge-race',Recovery:'badge-easy'};
+  list.innerHTML=runs.slice(0,15).map(r=>{
+    const m=Math.floor(r.pace),s=Math.round((r.pace-m)*60);
+    const paceStr=r.pace>0?m+':'+(s<10?'0'+s:s):'—';
+    const d=new Date(r.date);
+    const dateStr=d.toLocaleDateString('it-IT',{day:'numeric',month:'short'});
+    const emoji=typeEmoji[r.type]||'🏃';
+    return `<div class="run-card">
+      <div class="run-type-dot" style="background:var(--surface2)">${emoji}</div>
+      <div class="run-info">
+        <div class="run-title">${r.name||r.type}</div>
+        <div class="run-meta">${dateStr} · ${r.km} km · ${r.min} min${r.heartrate?' · ♥ '+Math.round(r.heartrate):''}</div>
+        <span class="badge ${badgeClass[r.type]||'badge-easy'}" style="margin-top:4px;display:inline-block">${r.type}</span>
+      </div>
+      <div class="run-right">
+        <div class="run-pace">${paceStr}</div>
+        <div class="run-pace-label">min/km</div>
+        ${r.elevGain>0?`<div style="font-size:10px;color:var(--text3);margin-top:2px">↑${Math.round(r.elevGain)}m</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ---- SETUP ----
+function loadSetup(){
+  if(creds.clientId) document.getElementById('inp-cid').value=creds.clientId;
+  if(creds.clientSecret) document.getElementById('inp-cs').value=creds.clientSecret;
+  if(creds.refreshToken) document.getElementById('inp-rt').value=creds.refreshToken;
+}
+function saveCredentials(){
+  const cid=document.getElementById('inp-cid').value.trim();
+  const cs=document.getElementById('inp-cs').value.trim();
+  const rt=document.getElementById('inp-rt').value.trim();
+  if(!cid||!cs||!rt){ showToast('⚠️ Compila tutti i campi'); return; }
+  creds={clientId:cid,clientSecret:cs,refreshToken:rt};
+  localStorage.setItem('rc_creds',JSON.stringify(creds));
+  showToast('✅ Credenziali salvate!');
+  setTimeout(()=>syncStrava(),500);
+}
+
+// ---- PLAN ----
+function renderPlan(){
+  if(!plan){ return; }
+  const c=document.getElementById('plan-container');
+  c.innerHTML=`<div class="plan-week">
+    <div class="plan-week-hdr"><span class="plan-week-title">${plan.title||'Piano settimanale'}</span><span class="plan-week-sub">${plan.weeks||4} settimane</span></div>
+    ${plan.days.map(d=>`<div class="plan-day">
+      <div class="plan-day-name">${d.name}</div>
+      <div class="plan-day-dot ${d.type==='run'?'dot-run':d.type==='race'?'dot-race':d.type==='long'?'dot-long':'dot-rest'}"></div>
+      <div><div class="plan-day-act">${d.activity}</div>${d.detail?`<div class="plan-day-det">${d.detail}</div>`:''}</div>
+    </div>`).join('')}
+  </div>`;
+}
+
+// ---- COACH AI ----
+const SYSTEM=`Sei un coach di corsa esperto che parla italiano, entusiasta e pratico. Analizzi i dati reali del runner da Strava e dai consigli personalizzati.
+
+Stile: diretto, incoraggiante, specifico. Max 200 parole. Fai domande per capire meglio il runner.
+
+Quando crei un piano di allenamento includi SEMPRE alla fine:
+[PIANO]
+GIORNI:Lun:Riposo|Mar:Corsa facile 6km|Mer:Riposo|Gio:Intervalli 5km|Ven:Riposo|Sab:Lungo 14km|Dom:Riposo
+Adatta in base all'obiettivo e al livello dell'utente.`;
+
+function getRunsSummary(){
+  if(!runs.length) return 'Nessuna corsa ancora registrata da Strava.';
+  const totalKm=runs.reduce((a,r)=>a+r.km,0).toFixed(1);
+  const avgPace=(runs.reduce((a,r)=>a+r.pace,0)/runs.length).toFixed(2);
+  const last5=runs.slice(0,5).map(r=>`${r.date}: ${r.type} ${r.km}km in ${r.min}min (passo ${r.pace} min/km${r.heartrate?', FC '+Math.round(r.heartrate):''})`).join('; ');
+  const weekKm=runs.filter(r=>{ const d=new Date(r.date); const n=new Date(); return (n-d)<7*86400000; }).reduce((a,r)=>a+r.km,0).toFixed(1);
+  return `Runner ha ${runs.length} corse totali da Strava. Tot: ${totalKm}km. Passo medio: ${avgPace} min/km. Km settimana corrente: ${weekKm}. Ultime corse: ${last5}.`;
+}
+
+function initChat(){
+  addMsg('ai',`Ciao! Sono il tuo coach 🏃‍♂️\n\nHo accesso alle tue corse Strava e sono qui per aiutarti a migliorare. Cosa vuoi fare oggi?`);
+}
+
+function addMsg(role,text){
+  const msgs=document.getElementById('chat-msgs');
+  const time=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  const div=document.createElement('div');
+  div.className=`msg-row ${role}`;
+  div.innerHTML=`<div class="msg-avatar ${role}">${role==='ai'?'🤖':'👤'}</div>
+    <div><div class="msg-bubble">${text.replace(/\n/g,'<br>')}</div><div class="msg-time">${time}</div></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop=msgs.scrollHeight;
+  chatHistory.push({role:role==='ai'?'assistant':'user',content:text});
+}
+
+function showTyping(){
+  const msgs=document.getElementById('chat-msgs');
+  const div=document.createElement('div');
+  div.className='msg-row ai'; div.id='typing';
+  div.innerHTML=`<div class="msg-avatar ai">🤖</div><div class="typing-bubble"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  msgs.appendChild(div); msgs.scrollTop=msgs.scrollHeight;
+}
+function removeTyping(){ const e=document.getElementById('typing'); if(e) e.remove(); }
+
+function parsePlan(text){
+  if(!text.includes('[PIANO]')) return null;
+  const line=text.split('\n').find(l=>l.startsWith('GIORNI:'));
+  if(!line) return null;
+  const map={Lun:'Lun',Mar:'Mar',Mer:'Mer',Gio:'Gio',Ven:'Ven',Sab:'Sab',Dom:'Dom'};
+  const parts=line.replace('GIORNI:','').split('|');
+  const days=parts.map(p=>{
+    const [abbr,...rest]=p.split(':');
+    const activity=rest.join(':');
+    const low=activity.toLowerCase();
+    const type=low.includes('riposo')?'rest':low.includes('gara')?'race':low.includes('lungo')?'long':'run';
+    return {name:map[abbr]||abbr,activity,detail:'',type};
+  });
+  return {title:'Piano personalizzato',weeks:4,days};
+}
+
+async function sendMsg(){
+  const inp=document.getElementById('chat-inp');
+  const text=inp.value.trim(); if(!text) return;
+  inp.value=''; addMsg('user',text); showTyping();
+  const context='\n\nDATI RUNNER STRAVA: '+getRunsSummary();
+  const msgs=[...chatHistory.slice(-12,-1),{role:'user',content:text+(chatHistory.length<=2?context:'')}];
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:SYSTEM+context,messages:msgs})
+    });
+    const data=await res.json();
+    removeTyping();
+    const reply=data.content?.[0]?.text||'Errore.';
+    const clean=reply.split('[PIANO]')[0].trim();
+    addMsg('ai',clean);
+    const p=parsePlan(reply);
+    if(p){ plan=p; localStorage.setItem('rc_plan',JSON.stringify(plan)); setTimeout(()=>addMsg('ai','✅ Piano salvato! Vai su "Piano" per vederlo.'),400); }
+  } catch(e){ removeTyping(); addMsg('ai','Errore di connessione. Riprova.'); }
+}
+
+function sendQuick(t){ document.getElementById('chat-inp').value=t; sendMsg(); }
+
+// INIT
+renderDashboard();
+if(plan) renderPlan();
+if(Object.keys(creds).length===0) setTimeout(()=>goTo('setup'),300);
+</script>
+</body>
+</html>
