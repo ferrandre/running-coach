@@ -220,6 +220,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Syne',
         <div class="inp-label">Refresh Token</div>
         <input class="inp" id="inp-rt" type="text" placeholder="eb5c8ac..."/>
         <button class="save-btn" onclick="saveCreds()">Salva e connetti</button>
+        <button class="save-btn" style="margin-top:8px;background:var(--surface3);color:var(--text2);font-size:13px;" onclick="testConnection()">🔍 Testa connessione</button>
+        <div id="debug-out" style="margin-top:10px;font-size:11px;font-family:'DM Mono',monospace;color:var(--text2);line-height:1.8;word-break:break-all;"></div>
         <div class="setup-note">I dati sono salvati solo sul tuo dispositivo. Il server proxy non conserva nessuna credenziale.</div>
       </div>
     </div>
@@ -431,6 +433,32 @@ function loadSetup(){
   if(creds.clientSecret) document.getElementById('inp-cs').value=creds.clientSecret;
   if(creds.refreshToken) document.getElementById('inp-rt').value=creds.refreshToken;
 }
+async function testConnection(){
+  const out=document.getElementById('debug-out');
+  out.textContent='';
+  const log=msg=>{ out.textContent+=msg+'\n'; };
+  log('1. Credenziali salvate:');
+  log('   clientId: '+(creds.clientId||'❌ mancante'));
+  log('   clientSecret: '+(creds.clientSecret?creds.clientSecret.slice(0,6)+'...':'❌ mancante'));
+  log('   refreshToken: '+(creds.refreshToken?creds.refreshToken.slice(0,6)+'...':'❌ mancante'));
+  log('2. Test server proxy...');
+  try{
+    const r=await fetch(PROXY+'/');
+    const d=await r.json();
+    log('   Server: '+JSON.stringify(d));
+  }catch(e){ log('   ❌ Server error: '+e.message); return; }
+  log('3. Test token Strava...');
+  try{
+    const r=await fetch(PROXY+'/strava/token',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({client_id:creds.clientId,client_secret:creds.clientSecret,refresh_token:creds.refreshToken})
+    });
+    const d=await r.json();
+    if(d.access_token){ log('   ✅ Token OK: '+d.access_token.slice(0,8)+'...'); }
+    else { log('   ❌ Risposta: '+JSON.stringify(d)); }
+  }catch(e){ log('   ❌ Token error: '+e.message); }
+}
+
 function saveCreds(){
   const cid=document.getElementById('inp-cid').value.trim();
   const cs=document.getElementById('inp-cs').value.trim();
